@@ -1,0 +1,216 @@
+// React imports
+import { useState, useMemo, useEffect } from "react";
+// MUI Components and Icons
+import { Switch, Button, Snackbar, Alert } from "@mui/material";
+import { Radio, FormControlLabel, FormLabel } from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import LockIcon from "@mui/icons-material/Lock";
+import RotateLeftIcon from "@mui/icons-material/RotateLeft";
+import { getCourses } from "./api/getCourses";
+import CourseList from "./CourseList";
+import ScheduleTable from "./ScheduleTable";
+import DurationToggle from "./DurationToggle";
+
+const timeHeader = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+export default function App() {
+  const [queueSubjects, setQueueSubjects] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  // from DB schedules' state
+  const [existingSchedules, setExistingSchedules] = useState([
+    { slot_course: "CCS 101", slot_day: 0, slot_time: 0 },
+    { slot_course: "CCS 101", slot_day: 0, slot_time: 1 },
+    { slot_course: "CCS 101", slot_day: 0, slot_time: 2 },
+  ]);
+
+  // newly plotted (temporary) state
+  const [newSchedules, setNewSchedules] = useState([]);
+
+  // merge existing and new schedules
+  const allSchedules = [...existingSchedules, ...newSchedules];
+
+  // console.log(allSchedules);
+
+  const [duration, setDuration] = useState(1);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const fetchCourses = await getCourses();
+
+      setQueueSubjects(fetchCourses);
+    };
+
+    loadData();
+    console.log("Initial data loaded");
+  }, []);
+
+  const handleCellClick = (course, dayIndex, timeIndex) => {
+    // Prevents bugs
+    if (dayIndex < 0 || dayIndex > 4) {
+      console.log("Invalid day index");
+      return;
+    }
+
+    // Check if no selected course
+    if (!selectedCourse) {
+      console.log(`Select a course first!`);
+      return;
+    }
+
+    // Check if cell is occupied
+    if (course) {
+      console.log("This cell is occuppied");
+      return;
+    }
+
+    if (selectedCourse.hours_week <= 0) {
+      console.log("There are no hours left on this subject");
+      return;
+    }
+
+    let slotsNeeded = 1;
+    if (duration === 1) slotsNeeded = 2;
+    else if (duration === 1.5) slotsNeeded = 3;
+
+    const TOTAL_SLOTS = 27;
+
+    // Check if plotting will exceed timetable’s last cell
+    if (timeIndex + slotsNeeded > TOTAL_SLOTS) {
+      console.log("Cannot place schedule — exceeds the timetable limit.");
+      return;
+    }
+
+    // Prevent scheduling during lunch
+    const isLunchBreak = (timeIndex) => timeIndex === 10 || timeIndex === 11;
+
+    if (
+      Array.from({ length: slotsNeeded }, (_, i) => timeIndex + i).some(
+        isLunchBreak
+      )
+    ) {
+      console.log("Cannot schedule overlapping lunch (12:00–1:00).");
+      return;
+    }
+
+    // Get all merged schedules (existing + new)
+    const occupiedCells = [...existingSchedules, ...newSchedules];
+
+    // Check if all required consecutive cells are free
+    const canPlace = Array.from(
+      { length: slotsNeeded },
+      (_, i) => timeIndex + i
+    ).every((tIndex) => {
+      // find if any existing schedule matches this day/time
+      const occupied = occupiedCells.some(
+        (s) => s.slot_day === dayIndex && s.slot_time === tIndex
+      );
+      return !occupied; // true means cell is free
+    });
+
+    // if not can place, return
+    if (!canPlace) {
+      console.log("Cannot place here — some cells are already occupied.");
+      return;
+    }
+
+    // Prevent going below zero
+    if (selectedCourse.hours_week - duration < 0) {
+      console.log("Not enough remaining hours for this duration!");
+      return;
+    }
+
+    // Update hours_week for selected course in queueSubjects
+    setQueueSubjects((prevSubjects) =>
+      prevSubjects.map((subject) =>
+        subject.course_code === selectedCourse.course_code
+          ? { ...subject, hours_week: subject.hours_week - duration }
+          : subject
+      )
+    );
+
+    setSelectedCourse((prevCourse) => ({
+      ...prevCourse,
+      hours_week: prevCourse.hours_week - duration,
+    }));
+
+    const newEntries = Array.from({ length: slotsNeeded }, (_, i) => ({
+      slot_course: selectedCourse.course_code,
+      slot_day: dayIndex,
+      slot_time: timeIndex + i, // consecutive slot indices
+    }));
+
+    console.log(newEntries);
+
+    setNewSchedules((prev) => [...prev, ...newEntries]);
+  };
+
+  // Create an upload to take the newSchedules and pass it to a check then the database
+  const uploadScheduleToDatabase = () => {
+    console.log(newSchedules);
+  };
+
+  return (
+    <main className="flex flex-col justify-center items-center gap-6 bg-gray-300 p-10">
+      {/* List of Courses */}
+      <CourseList
+        courses={queueSubjects}
+        setSelectedCourse={setSelectedCourse}
+        selectedCourse={selectedCourse}
+      />
+
+      {/* 3-button radio for duration */}
+      {selectedCourse ? (
+        <DurationToggle
+          selectedCourse={selectedCourse}
+          duration={duration}
+          setDuration={setDuration}
+        />
+      ) : (
+        <div className="min-w-md shadow-md bg-white p-8 rounded-xl text-center italic text-gray-600">
+          No Course Selected
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-2">
+        <Button
+          variant="contained"
+          sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
+          endIcon={<AutoAwesomeIcon />}
+        >
+          Fill-In Schedules
+        </Button>
+        <Button
+          variant="contained"
+          sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
+          onClick={uploadScheduleToDatabase}
+          // disabled={disableButtonCheck}
+          endIcon={<LockIcon />}
+          color="success"
+        >
+          Lock Schedule
+        </Button>
+        <Button
+          variant="contained"
+          sx={{
+            borderRadius: "20px",
+            fontWeight: 600,
+            marginTop: "10px",
+            backgroundColor: "gray",
+          }}
+          endIcon={<RotateLeftIcon />}
+        >
+          Reset Non-Locked Schedule
+        </Button>
+      </div>
+
+      {/* Schedule Timetable */}
+      <ScheduleTable
+        headers={timeHeader}
+        onCellClick={handleCellClick}
+        schedules={allSchedules}
+      />
+    </main>
+  );
+}

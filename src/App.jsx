@@ -192,24 +192,23 @@ export default function App() {
         room_ID: s.assigned_room?.toString() || "0",
       }));
 
+    // wait for how many ms
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     try {
       setAllocating(true);
       setAllocatingStatus("loading");
 
-      await sleep(2000); // “thinking”
+      await sleep(1500); // “thinking”
 
-      const scheduleSimulation = new Promise((resolve, reject) => {
-        setTimeout(() => {
-          reject([]);
-        }, 1000);
-      });
+      // const scheduleSimulation = new Promise((resolve, reject) => {
+      //   setTimeout(() => {
+      //     reject([]);
+      //   }, 1000);
+      // });
 
       const assigningSchedules = await autoAllocate(slots);
       // const assigningSchedules = await scheduleSimulation;
-
-      console.log(assigningSchedules);
 
       if (!assigningSchedules || assigningSchedules.length === 0) {
         setAllocatingStatus("empty");
@@ -218,6 +217,7 @@ export default function App() {
       }
 
       setAllocatingStatus("success");
+      await sleep(500);
 
       // success — animate insertion
       for (let i = 0; i < assigningSchedules.length; i++) {
@@ -397,8 +397,8 @@ export default function App() {
       <h1 className="text-center text-4xl font-bold underline text-gray-800">
         Schedule of {"Computer Science"}
       </h1>
-      <main className="flex flex-col gap-4 pt-10 px-15">
-        <div className="w-full flex justify-center gap-10">
+      <main className="flex flex-col gap-4 p-6">
+        <div className="w-full flex justify-center gap-4">
           <div className="flex-1">
             <CourseList
               courses={queueSubjects}
@@ -443,7 +443,7 @@ export default function App() {
               {/* Reset Table */}
               <button
                 onClick={handleResetTable}
-                className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 shadow-md shadow-gray-900/40"
+                className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-500 hover:bg-gray-400 text-gray-50 shadow-md shadow-gray-900/40"
               >
                 <span>Reset Non-locked Schedules</span>
                 <RotateLeftIcon fontSize="small" />
@@ -467,8 +467,10 @@ export default function App() {
           </div>
         </div>
 
-        <div className="w-full flex mt-10 justify-end">
-          <RemoveLockSchedules />
+        <hr className="my-6 border-gray-400" />
+
+        <div className="w-full flex justify-center">
+          <RemoveLockSchedules lockedSchedules={existingSchedules} />
         </div>
 
         <AutoAllocatingOverlay

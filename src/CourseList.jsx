@@ -87,7 +87,7 @@ const LockCourseCard = ({ course }) => {
         </p>
         <p className="flex items-center gap-2">
           <CoPresentIcon fontSize="small" />
-          {teacherFullName || "No teacher"} - {assignedRoom || "No room"}
+          {teacherFullName || "No Teacher"} → {assignedRoom || "No Room"}
         </p>
       </div>
 

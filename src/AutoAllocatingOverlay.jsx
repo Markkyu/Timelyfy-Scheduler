@@ -38,7 +38,7 @@ export default function AutoAllocatingOverlay({ visible, status }) {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs bg-black/60 animate-fadeIn">
       <div className="w-full max-w-2xl mx-4">
         {/* Terminal window */}
         <div className="bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
@@ -78,11 +78,6 @@ export default function AutoAllocatingOverlay({ visible, status }) {
                 ✖ Allocation failed - {"error message"}
               </div>
             )}
-            {/* {status === "done" && (
-              <div className="animate-slideDown text-blue-400 font-mono text-sm">
-                > exit scheduler
-              </div>
-            )} */}
 
             {logs.length < logMessages.length && (
               <div className="text-blue-400 flex items-center gap-2">
@@ -107,6 +102,20 @@ export default function AutoAllocatingOverlay({ visible, status }) {
         }
         .animate-slideDown {
           animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.25s ease-out;
         }
       `}</style>
     </div>

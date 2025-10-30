@@ -7,6 +7,7 @@ export default function ScheduleTable({
   onCellClick,
   schedules,
   selectedCourse,
+  children,
 }) {
   const timeSlots = generateTimeSlots();
 
@@ -29,10 +30,15 @@ export default function ScheduleTable({
   });
 
   return (
-    <div className="w-full border-t-4 border-t-red-800 bg-white p-6 rounded-2xl shadow-md border border-gray-300 overflow-x-auto">
-      <h2 className="text-2xl font-semibold text-red-800 mb-4">
-        Weekly Schedule
-      </h2>
+    <div className="w-full border-t-6 border-t-red-800 bg-white p-6 rounded-2xl shadow-md border border-gray-300 overflow-x-auto">
+      {/* header */}
+      <header className="flex justify-between mb-4">
+        <h2 className="text-2xl font-semibold text-red-800 mb-4">
+          Weekly Schedule
+        </h2>
+
+        <div className="flex gap-4">{children}</div>
+      </header>
 
       <table className="w-full border-collapse text-sm text-gray-700">
         <thead>
@@ -121,7 +127,7 @@ export default function ScheduleTable({
                       className={`border border-gray-300 text-center font-semibold cursor-pointer transition-all duration-200 ease-out
                         ${
                           course
-                            ? `${courseColor.bg} ${courseColor.border} shadow-md scale-95 rounded-2xl hover:scale-106`
+                            ? `${courseColor.bg} ${courseColor.border} shadow-md scale-95 rounded-xl hover:scale-104`
                             : "hover:bg-green-100"
                         }`}
                     >

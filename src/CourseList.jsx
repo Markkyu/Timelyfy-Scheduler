@@ -28,7 +28,7 @@ export default function CourseList({
   const checkOriginalCourse = selectedCourse === selectedCourseOriginalHours;
 
   return (
-    <section className="border-t-4 border-t-red-800 p-6 bg-white shadow-md rounded-xl w-full">
+    <section className="border-t-6 border-t-red-800 p-6 bg-white shadow-md rounded-xl w-full">
       <h2 className="text-2xl font-semibold text-red-800">Available Courses</h2>
       <div className="py-4">{children}</div>
       <div className="grid grid-cols-1 gap-4">

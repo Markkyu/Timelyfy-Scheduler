@@ -1,179 +1,114 @@
 import { useEffect, useState } from "react";
 
-export default function AutoAllocatingOverlay({ visible }) {
-  const [stars, setStars] = useState([]);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+export default function AutoAllocatingOverlay({ visible, status }) {
+  const [logs, setLogs] = useState([]);
+  const [dots, setDots] = useState("");
 
-  const messages = [
-    "Creating your schedules...",
-    "Analyzing time slots...",
-    "Optimizing allocations...",
-    "Plotting your schedule...",
-    "Finalizing details...",
-    "Please wait a moment...",
+  const logMessages = [
+    { text: "$ initializing schedule allocator...", delay: 0 },
+    { text: "> analyzing timetable", delay: 1000 },
+    // { text: "> calculating optimal paths", delay: 3000 },
+    // { text: "✓ transaction complete", delay: 10000, success: true },
   ];
 
-  // Generate random floating stars
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   useEffect(() => {
-    const generateStars = Array.from({ length: 30 }).map((_, index) => ({
-      id: index,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 6 + 2,
-      delay: Math.random() * 2,
-    }));
-    setStars(generateStars);
-  }, []);
+    if (!visible) {
+      setLogs([]);
+      setDots("");
+      return;
+    }
 
-  // Cycle through messages
-  useEffect(() => {
-    if (!visible) return;
+    // Add logs progressively
+    logMessages.forEach((log) => {
+      setTimeout(() => {
+        setLogs((prev) => [...prev, log]);
+      }, log.delay);
+    });
 
-    const interval = setInterval(() => {
-      setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
-    }, 2500);
+    // Animated dots
+    const dotsInterval = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
+    }, 400);
 
-    return () => clearInterval(interval);
-  }, [visible, messages.length]);
+    return () => clearInterval(dotsInterval);
+  }, [visible]);
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <style jsx="true">{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="w-full max-w-2xl mx-4">
+        {/* Terminal window */}
+        <div className="bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
+          {/* Terminal header */}
+          <div className="bg-gray-800 px-4 py-3 flex items-center gap-2 border-b border-gray-700">
+            <div className="flex gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+            </div>
+            <span className="text-gray-400 text-sm ml-4 font-mono">
+              Timelyfy schedule-allocator v1.0
+            </span>
+          </div>
 
-        @keyframes float {
-          0%,
-          100% {
-            opacity: 0.2;
-            transform: scale(0.8) translateY(0);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.2) translateY(-20px);
-          }
-        }
+          {/* Terminal content */}
+          <div className="p-6 font-mono text-sm space-y-2 min-h-[300px]">
+            {logs.map((log, index) => (
+              <div key={index} className="animate-slideDown text-gray-300">
+                {log.text}
+              </div>
+            ))}
 
-        @keyframes scaleIn {
-          from {
-            transform: scale(0.8);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
+            {/* Status Message */}
+            {status === "success" && (
+              <div className="animate-slideDown text-green-400 font-mono text-sm">
+                ✓ Slots found with courses!
+              </div>
+            )}
+            {status === "empty" && (
+              <div className="animate-slideDown text-yellow-400 font-mono text-sm">
+                ⚠︎ No schedules could be allocated
+              </div>
+            )}
+            {status === "error" && (
+              <div className="animate-slideDown text-red-400 font-mono text-sm">
+                ✖ Allocation failed - {"error message"}
+              </div>
+            )}
+            {/* {status === "done" && (
+              <div className="animate-slideDown text-blue-400 font-mono text-sm">
+                > exit scheduler
+              </div>
+            )} */}
 
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translateY(10px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes pulse {
-          0%,
-          100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-
-        .animate-float {
-          animation: float 2.5s ease-in-out infinite;
-        }
-
-        .animate-scaleIn {
-          animation: scaleIn 0.8s ease-out;
-        }
-
-        .animate-spin-slow {
-          animation: spin 5s linear infinite;
-        }
-
-        .animate-slideUp {
-          animation: slideUp 0.5s ease-out;
-        }
-
-        .animate-pulse-slow {
-          animation: pulse 2s ease-in-out infinite;
-        }
-      `}</style>
-
-      {/* Floating stars */}
-      {stars.map((star) => (
-        <div
-          key={star.id}
-          className="absolute rounded-full bg-yellow-300 shadow-lg animate-float"
-          style={{
-            width: `${star.size}px`,
-            height: `${star.size}px`,
-            top: `${star.y}%`,
-            left: `${star.x}%`,
-            filter: "drop-shadow(0 0 6px rgba(255,255,150,0.8))",
-            animationDelay: `${star.delay}s`,
-          }}
-        />
-      ))}
-
-      {/* Center message */}
-      <div className="text-center text-white animate-scaleIn">
-        <h1 className="text-4xl font-extrabold tracking-wide mb-4">
-          Auto-allocating schedules
-        </h1>
-
-        {/* Animated message that changes */}
-        <p
-          key={currentMessageIndex}
-          className="text-xl text-gray-300 animate-slideUp"
-        >
-          {messages[currentMessageIndex]}
-        </p>
-
-        {/* Loading dots */}
-        <div className="flex justify-center gap-2 mt-6">
-          <div
-            className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse-slow"
-            style={{ animationDelay: "0s" }}
-          />
-          <div
-            className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse-slow"
-            style={{ animationDelay: "0.3s" }}
-          />
-          <div
-            className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse-slow"
-            style={{ animationDelay: "0.6s" }}
-          />
+            {logs.length < logMessages.length && (
+              <div className="text-blue-400 flex items-center gap-2">
+                <div className="w-2 h-4 bg-blue-400 animate-pulse" />
+                <span>Processing{dots}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

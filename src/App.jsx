@@ -33,6 +33,7 @@ export default function App() {
 
   const [selectedCourse, setSelectedCourse] = useState(null);
 
+  // Toast notification
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("error");
   const [toastTrigger, setToastTrigger] = useState(0);
@@ -71,7 +72,9 @@ export default function App() {
 
   const [duration, setDuration] = useState(1);
 
+  // Auto allocate states
   const [allocating, setAllocating] = useState(false);
+  const [allocatingStatus, setAllocatingStatus] = useState("loading");
 
   const [selectedCourseOriginalHours, setSelectedCourseOriginalHours] =
     useState(null);
@@ -79,26 +82,6 @@ export default function App() {
   const disableFillButton = newSchedules.length != 0;
 
   // Load the queue and the timetable with data
-  // useEffect(() => {
-  // const loadData = async () => {
-  // const fetchCourses = await getCourses(
-  //   college_group,
-  //   college_year,
-  //   college_sem
-  // );
-  // const fetchSchedules = await getSchedules(
-  //   college_group,
-  //   college_year,
-  //   college_sem
-  // );
-  // setQueueSubjects(fetchCourses);
-  //   setExistingSchedules(fetchSchedules);
-  //   console.log("Initial data loaded");
-  // };
-  // setDisableFillButton(false);
-  // loadData();
-  // }, []);
-
   useEffect(() => {
     if (getInitialCourses) {
       setQueueSubjects(getInitialCourses);
@@ -202,52 +185,118 @@ export default function App() {
 
   const handleAutoAllocate = async () => {
     const slots = queueSubjects
-      .filter((element) => element.hours_week > 0 && element.is_plotted != 1)
-      .map((element) => ({
-        course_ID: element.course_id,
-        teacher_ID: element.assigned_teacher?.toString() || "0",
-        room_ID: element.assigned_room?.toString() || "0",
+      .filter((s) => s.hours_week > 0 && s.is_plotted !== 1)
+      .map((s) => ({
+        course_ID: s.course_id,
+        teacher_ID: s.assigned_teacher?.toString() || "0",
+        room_ID: s.assigned_room?.toString() || "0",
       }));
 
-    console.log(slots);
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     try {
       setAllocating(true);
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      setAllocatingStatus("loading");
 
-      await sleep(1800);
+      await sleep(2000); // “thinking”
+
+      const scheduleSimulation = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject([]);
+        }, 1000);
+      });
 
       const assigningSchedules = await autoAllocate(slots);
+      // const assigningSchedules = await scheduleSimulation;
 
       console.log(assigningSchedules);
 
-      // Smooth insertion of generated schedules
-      for (let i = 0; i < assigningSchedules.length; i++) {
-        setNewSchedules((prev) => [...prev, assigningSchedules[i]]);
-        await sleep(44);
+      if (!assigningSchedules || assigningSchedules.length === 0) {
+        setAllocatingStatus("empty");
+        await sleep(1500);
+        return;
       }
 
-      // Now that we know which courses got scheduled
-      setQueueSubjects((prevSubjects) =>
-        prevSubjects.map((subject) => {
+      setAllocatingStatus("success");
+
+      // success — animate insertion
+      for (let i = 0; i < assigningSchedules.length; i++) {
+        setNewSchedules((prev) => [...prev, assigningSchedules[i]]);
+        await sleep(45);
+      }
+
+      // update hours
+      setQueueSubjects((prev) =>
+        prev.map((subject) => {
           const scheduledCount = assigningSchedules.filter(
             (s) => s.slot_course === subject.course_id
           ).length;
-
-          // Each cell = 0.5 hours
           const hoursUsed = scheduledCount * 0.5;
-
           return hoursUsed > 0
             ? { ...subject, hours_week: subject.hours_week - hoursUsed }
             : subject;
         })
       );
+
+      await sleep(1);
     } catch (err) {
       console.error(err);
+      setAllocatingStatus("error");
+      await sleep(1500);
     } finally {
+      await sleep(200);
       setAllocating(false);
     }
   };
+
+  // const handleAutoAllocate = async () => {
+  //   const slots = queueSubjects
+  //     .filter((element) => element.hours_week > 0 && element.is_plotted != 1)
+  //     .map((element) => ({
+  //       course_ID: element.course_id,
+  //       teacher_ID: element.assigned_teacher?.toString() || "0",
+  //       room_ID: element.assigned_room?.toString() || "0",
+  //     }));
+
+  //   console.log(slots);
+
+  //   try {
+  //     setAllocating(true);
+  //     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  //     await sleep(2000);
+
+  //     const assigningSchedules = await autoAllocate(slots);
+
+  //     console.log(assigningSchedules);
+
+  //     // Smooth insertion of generated schedules
+  //     for (let i = 0; i < assigningSchedules.length; i++) {
+  //       setNewSchedules((prev) => [...prev, assigningSchedules[i]]);
+  //       await sleep(33);
+  //     }
+
+  //     // Now that we know which courses got scheduled
+  //     setQueueSubjects((prevSubjects) =>
+  //       prevSubjects.map((subject) => {
+  //         const scheduledCount = assigningSchedules.filter(
+  //           (s) => s.slot_course === subject.course_id
+  //         ).length;
+
+  //         // Each cell = 0.5 hours
+  //         const hoursUsed = scheduledCount * 0.5;
+
+  //         return hoursUsed > 0
+  //           ? { ...subject, hours_week: subject.hours_week - hoursUsed }
+  //           : subject;
+  //       })
+  //     );
+  //   } catch (err) {
+  //     console.error(err);
+  //   } finally {
+  //     setAllocating(false);
+  //   }
+  // };
 
   const { mutate: uploadScheduleMutate, isPending: postScheduleLoading } =
     useMutation({
@@ -343,79 +392,12 @@ export default function App() {
     );
   };
 
-  console.log(newSchedules);
-
   return (
     <div className="bg-gray-300 py-10 h-full container-fluid">
       <h1 className="text-center text-4xl font-bold underline text-gray-800">
         Schedule of {"Computer Science"}
       </h1>
-      <main className="flex flex-col gap-4 py-5 px-15">
-        {/* <div className="flex justify-center items-center gap-6 p-6">
-          <CourseList
-            courses={queueSubjects}
-            selectedCourse={selectedCourse}
-            setSelectedCourse={setSelectedCourse}
-            selectedCourseOriginalHours={selectedCourseOriginalHours}
-            setSelectedCourseOriginalHours={setSelectedCourseOriginalHours}
-            setToastMessage={() => {
-              setToastMessage("Finish scheduling this subject first");
-              setToastTrigger((prev) => prev + 1);
-            }}
-          />
-        </div> */}
-
-        <div className="px-10 2xl:px-20 pb-4 flex justify-end">
-          <div>
-            {/* <DurationToggle
-              selectedCourse={selectedCourse}
-              duration={duration}
-              setDuration={setDuration}
-            /> */}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Auto Allocate */}
-            <button
-              onClick={handleAutoAllocate}
-              disabled={disableFillButton}
-              className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
-              ${
-                disableFillButton
-                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/30"
-              }`}
-            >
-              <span>Auto Allocate</span>
-              <AutoAwesomeIcon fontSize="small" />
-            </button>
-
-            {/* Reset Table */}
-            <button
-              onClick={handleResetTable}
-              className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 shadow-md shadow-gray-900/40"
-            >
-              <span>Reset Non-locked Schedules</span>
-              <RotateLeftIcon fontSize="small" />
-            </button>
-
-            {/* Lock Schedule */}
-            <button
-              onClick={uploadScheduleToDatabase}
-              disabled={disabledLockButton}
-              className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
-              ${
-                disabledLockButton
-                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40"
-              }`}
-            >
-              <span>Lock Schedule</span>
-              <LockIcon fontSize="small" />
-            </button>
-          </div>
-        </div>
-
+      <main className="flex flex-col gap-4 pt-10 px-15">
         <div className="w-full flex justify-center gap-10">
           <div className="flex-1">
             <CourseList
@@ -442,33 +424,67 @@ export default function App() {
               schedules={allSchedules}
               onCellClick={handleCellClick}
               selectedCourse={selectedCourse}
-            />
+            >
+              {/* Auto Allocate */}
+              <button
+                onClick={handleAutoAllocate}
+                disabled={disableFillButton}
+                className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
+              ${
+                disableFillButton
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/30"
+              }`}
+              >
+                <span>Auto Allocate</span>
+                <AutoAwesomeIcon fontSize="small" />
+              </button>
+
+              {/* Reset Table */}
+              <button
+                onClick={handleResetTable}
+                className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 shadow-md shadow-gray-900/40"
+              >
+                <span>Reset Non-locked Schedules</span>
+                <RotateLeftIcon fontSize="small" />
+              </button>
+
+              {/* Lock Schedule */}
+              <button
+                onClick={uploadScheduleToDatabase}
+                disabled={disabledLockButton}
+                className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
+              ${
+                disabledLockButton
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40"
+              }`}
+              >
+                <span>Lock Schedule</span>
+                <LockIcon fontSize="small" />
+              </button>
+            </ScheduleTable>
           </div>
         </div>
 
-        <div className="w-full bg-red-200">test</div>
+        <div className="w-full flex mt-10 justify-end">
+          <RemoveLockSchedules />
+        </div>
 
-        <AutoAllocatingOverlay visible={allocating} />
+        <AutoAllocatingOverlay
+          visible={allocating}
+          status={allocatingStatus} // "loading" | "success" | "empty" | "error"
+        />
 
         <ToastNotification
           message={toastMessage}
           type={toastType}
-          duration={5000}
+          duration={3500}
           trigger={toastTrigger}
         />
       </main>
     </div>
   );
-}
-
-{
-  /* <div className="bg-red-300">
-  <ScheduleTable
-    headers={timeHeader}
-    schedules={allSchedules}
-    onCellClick={handleCellClick}
-  />
-</div> */
 }
 
 // const handleAutoAllocate = async () => {

@@ -7,6 +7,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 import UploadIcon from "@mui/icons-material/Upload";
 // Components
+import ToastNotification from "./ToastNotification";
 import CourseList from "./CourseList";
 import ScheduleTable from "./ScheduleTable";
 import DurationToggle from "./DurationToggle";
@@ -31,6 +32,10 @@ export default function App() {
   const college_sem = 1;
 
   const [selectedCourse, setSelectedCourse] = useState(null);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("error");
+  const [toastTrigger, setToastTrigger] = useState(0);
 
   // from DB schedules' state
   const [existingSchedules, setExistingSchedules] = useState([]);
@@ -64,15 +69,14 @@ export default function App() {
 
   const disabledLockButton = selectedCourse && selectedCourse?.hours_week != 0;
 
-  const disableFillButton = selectedCourse;
-  // const [disableFillButton, setDisableFillButton] = useState(true);
-
   const [duration, setDuration] = useState(1);
 
   const [allocating, setAllocating] = useState(false);
 
   const [selectedCourseOriginalHours, setSelectedCourseOriginalHours] =
     useState(null);
+
+  const disableFillButton = newSchedules.length != 0;
 
   // Load the queue and the timetable with data
   // useEffect(() => {
@@ -119,6 +123,9 @@ export default function App() {
 
     if (!validation.valid) {
       console.log(validation.message);
+      setToastMessage(validation.message);
+      setToastTrigger((prev) => prev + 1);
+      // setToastType("error"); // error by default, commented
       return;
     }
 
@@ -242,7 +249,7 @@ export default function App() {
     }
   };
 
-  const { mutate: uplaodScheduleMutate, isPending: postScheduleLoading } =
+  const { mutate: uploadScheduleMutate, isPending: postScheduleLoading } =
     useMutation({
       mutationFn: (newSchedules) => uploadSchedule(newSchedules),
 
@@ -256,6 +263,7 @@ export default function App() {
         console.log("Succesful Schedule!");
 
         setSelectedCourse(null);
+        setNewSchedules([]);
       },
 
       onError: (error) => {
@@ -265,15 +273,7 @@ export default function App() {
 
   // Create an upload to take the newSchedules and pass it to a check then the database
   const uploadScheduleToDatabase = async () => {
-    uplaodScheduleMutate(newSchedules);
-    // try {
-    //   const { message, plottedCourses } = await uploadSchedule(newSchedules);
-    //   console.log(message);
-    //   console.log(plottedCourses);
-    //   alert("Successful");
-    // } catch (err) {
-    //   console.error(err?.message);
-    // }
+    uploadScheduleMutate(newSchedules);
   };
 
   const handleResetTable = () => {
@@ -343,86 +343,119 @@ export default function App() {
     );
   };
 
+  console.log(newSchedules);
+
   return (
     <div className="bg-gray-300 py-10 h-full container-fluid">
       <h1 className="text-center text-4xl font-bold underline text-gray-800">
         Schedule of {"Computer Science"}
       </h1>
       <main className="flex flex-col gap-4 py-5 px-15">
-        <div className="flex justify-center items-center gap-6 p-6">
+        {/* <div className="flex justify-center items-center gap-6 p-6">
           <CourseList
             courses={queueSubjects}
             selectedCourse={selectedCourse}
             setSelectedCourse={setSelectedCourse}
             selectedCourseOriginalHours={selectedCourseOriginalHours}
             setSelectedCourseOriginalHours={setSelectedCourseOriginalHours}
+            setToastMessage={() => {
+              setToastMessage("Finish scheduling this subject first");
+              setToastTrigger((prev) => prev + 1);
+            }}
           />
-        </div>
+        </div> */}
 
-        <div className="px-10 pb-4 flex justify-between">
+        <div className="px-10 2xl:px-20 pb-4 flex justify-end">
           <div>
-            <DurationToggle
+            {/* <DurationToggle
               selectedCourse={selectedCourse}
               duration={duration}
               setDuration={setDuration}
-            />
+            /> */}
           </div>
 
           <div className="flex items-center gap-4">
-            <Button
-              variant="contained"
-              sx={{
-                fontWeight: "600",
-                borderRadius: "5px",
-              }}
+            {/* Auto Allocate */}
+            <button
               onClick={handleAutoAllocate}
-              endIcon={<AutoAwesomeIcon />}
               disabled={disableFillButton}
+              className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
+              ${
+                disableFillButton
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/30"
+              }`}
             >
-              Auto Allocate
-            </Button>
+              <span>Auto Allocate</span>
+              <AutoAwesomeIcon fontSize="small" />
+            </button>
 
-            <Button
-              variant="contained"
-              sx={{
-                fontWeight: 600,
-                backgroundColor: "gray",
-                borderRadius: "5px",
-              }}
-              endIcon={<RotateLeftIcon />}
+            {/* Reset Table */}
+            <button
               onClick={handleResetTable}
+              className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 shadow-md shadow-gray-900/40"
             >
-              Reset Table
-            </Button>
+              <span>Reset Non-locked Schedules</span>
+              <RotateLeftIcon fontSize="small" />
+            </button>
 
-            <Button
-              variant="contained"
-              color="success"
-              sx={{
-                fontWeight: 600,
-                borderRadius: "5px",
-              }}
-              endIcon={<LockIcon />}
+            {/* Lock Schedule */}
+            <button
               onClick={uploadScheduleToDatabase}
               disabled={disabledLockButton}
+              className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200
+              ${
+                disabledLockButton
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40"
+              }`}
             >
-              Lock Schedule
-            </Button>
+              <span>Lock Schedule</span>
+              <LockIcon fontSize="small" />
+            </button>
           </div>
         </div>
 
         <div className="w-full flex justify-center gap-10">
-          <ScheduleTable
-            headers={timeHeader}
-            schedules={allSchedules}
-            onCellClick={handleCellClick}
-            selectedCourse={selectedCourse}
-          />
+          <div className="flex-1">
+            <CourseList
+              courses={queueSubjects}
+              selectedCourse={selectedCourse}
+              setSelectedCourse={setSelectedCourse}
+              selectedCourseOriginalHours={selectedCourseOriginalHours}
+              setSelectedCourseOriginalHours={setSelectedCourseOriginalHours}
+              setToastMessage={() => {
+                setToastMessage("Finish scheduling this subject first");
+                setToastTrigger((prev) => prev + 1);
+              }}
+            >
+              <DurationToggle
+                selectedCourse={selectedCourse}
+                duration={duration}
+                setDuration={setDuration}
+              />
+            </CourseList>
+          </div>
+          <div className="flex-3">
+            <ScheduleTable
+              headers={timeHeader}
+              schedules={allSchedules}
+              onCellClick={handleCellClick}
+              selectedCourse={selectedCourse}
+            />
+          </div>
         </div>
 
         <div className="w-full bg-red-200">test</div>
 
         <AutoAllocatingOverlay visible={allocating} />
+
+        <ToastNotification
+          message={toastMessage}
+          type={toastType}
+          duration={5000}
+          trigger={toastTrigger}
+        />
       </main>
     </div>
   );
@@ -437,21 +470,6 @@ export default function App() {
   />
 </div> */
 }
-
-// {/* <div className="flex flex-col">
-//   {/* 3-button radio for duration */}
-//   {selectedCourse ? (
-//     <DurationToggle
-//       selectedCourse={selectedCourse}
-//       duration={duration}
-//       setDuration={setDuration}
-//     />
-//   ) : (
-//     <div className="w-full min-w-sm shadow-md bg-white p-8 rounded-xl text-center italic text-gray-600">
-//       No Course Selected
-//     </div>
-//   )}
-// </div> */}
 
 // const handleAutoAllocate = async () => {
 //   // Only send schedule that has the complete hours remove the schedules with 0 hours

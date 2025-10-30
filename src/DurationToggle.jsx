@@ -20,7 +20,7 @@ export default function DurationToggle({
           ${
             hasSelected
               ? "bg-white border-red-800"
-              : "bg-gray-100 border-gray-200 opacity-70 cursor-not-allowed"
+              : "bg-gray-100 border-gray-200 opacity-70"
           }`}
       >
         <AccessTimeIcon
@@ -44,11 +44,9 @@ export default function DurationToggle({
               type="radio"
               value={option.value}
               checked={duration === option.value}
-              onChange={(e) =>
-                hasSelected && setDuration(parseFloat(e.target.value))
-              }
+              onChange={(e) => setDuration(parseFloat(e.target.value))}
               className="hidden"
-              disabled={!hasSelected}
+              // disabled={!hasSelected}
             />
             {option.label}
           </label>

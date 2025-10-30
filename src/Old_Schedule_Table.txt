@@ -1,5 +1,4 @@
 import generateTimeSlots from "./generateTimeSlots";
-import { colorPalette } from "./components/colorPalette";
 
 export default function ScheduleTable({
   headers,
@@ -17,6 +16,26 @@ export default function ScheduleTable({
 
   const isLunchBreak = (timeIndex) => timeIndex === 10 || timeIndex === 11;
 
+  // Define 4 color variants (soft pastel tones)
+  const colorPalette = [
+    {
+      bg: "bg-linear-to-b from-blue-200 to-blue-300 text-blue-800",
+      // border: "border-blue-300",
+    },
+    {
+      bg: "bg-linear-to-b from-green-200 to-green-300 text-green-800",
+      // border: "border-green-300",
+    },
+    {
+      bg: "bg-linear-to-b from-yellow-200 to-yellow-300 text-yellow-800",
+      // border: "border-yellow-300",
+    },
+    {
+      bg: "bg-linear-to-b from-pink-200 to-pink-300 text-pink-800",
+      // border: "border-pink-300",
+    },
+  ];
+
   // Assign a consistent color per course name/id
   const courseColorMap = {};
   let colorIndex = 0;
@@ -29,17 +48,15 @@ export default function ScheduleTable({
   });
 
   return (
-    <div className="w-full border-t-4 border-t-red-800 bg-white p-6 rounded-2xl shadow-md border border-gray-300 overflow-x-auto">
-      <h2 className="text-2xl font-semibold text-red-800 mb-4">
+    <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-300 overflow-x-auto">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
         Weekly Schedule
       </h2>
 
-      <table className="w-full border-collapse text-sm text-gray-700">
+      <table className="min-w-5xl 2xl:min-w-7xl w-full border-collapse text-sm text-gray-700">
         <thead>
-          <tr className="bg-gray-800 text-gray-50">
-            <th className="border border-gray-300 px-4 py-3 text-center font-semibold">
-              TIME
-            </th>
+          <tr className="bg-gray-100 text-gray-800">
+            <th className="border border-gray-300 px-4 py-3 text-left font-semibold"></th>
             {headers?.map((weekday, i) => (
               <th
                 key={i}
@@ -56,10 +73,17 @@ export default function ScheduleTable({
             const alternating = timeIndex % 2 === 0;
 
             return (
-              <tr key={timeIndex} className={`transition-colors`}>
+              <tr
+                key={timeIndex}
+                className={`${
+                  alternating ? "bg-gray-50" : "bg-white"
+                } transition-colors`}
+              >
                 {/* Time Column */}
                 <td
-                  className={`border border-gray-300 px-3 py-4 text-center font-medium text-gray-800 `}
+                  className={`border border-gray-300 px-3 py-2 text-center font-medium text-gray-800 ${
+                    alternating ? "bg-gray-100" : "bg-gray-50"
+                  }`}
                 >
                   {time.time_slot}
                 </td>
@@ -118,10 +142,10 @@ export default function ScheduleTable({
 
                         onCellClick(course, dayIndex, timeIndex);
                       }}
-                      className={`border border-gray-300 text-center font-semibold cursor-pointer transition-all duration-200 ease-out
+                      className={`border border-gray-300 px-3 py-2 text-center font-semibold cursor-pointer transition-all duration-200 ease-out
                         ${
                           course
-                            ? `${courseColor.bg} ${courseColor.border} shadow-md scale-95 rounded-2xl hover:scale-106`
+                            ? `${courseColor.bg} ${courseColor.border} shadow-md scale-95 rounded-xl`
                             : "hover:bg-green-100"
                         }`}
                     >

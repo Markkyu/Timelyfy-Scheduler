@@ -10,6 +10,8 @@ export default function CourseList({
   setSelectedCourse,
   selectedCourseOriginalHours,
   setSelectedCourseOriginalHours,
+  setToastMessage,
+  children,
 }) {
   const handleSelect = (course) => {
     setSelectedCourse((prev) => {
@@ -26,12 +28,10 @@ export default function CourseList({
   const checkOriginalCourse = selectedCourse === selectedCourseOriginalHours;
 
   return (
-    <section className="border-x-4 border-x-red-800 p-6 bg-white shadow-md rounded-xl w-full">
-      <h2 className="text-2xl font-semibold mb-4 text-red-800">
-        Available Courses
-      </h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <section className="border-t-4 border-t-red-800 p-6 bg-white shadow-md rounded-xl w-full">
+      <h2 className="text-2xl font-semibold text-red-800">Available Courses</h2>
+      <div className="py-4">{children}</div>
+      <div className="grid grid-cols-1 gap-4">
         {courses?.map((course) => {
           const isSelected = selectedCourse?.course_id === course.course_id;
           const isPlotted = course.is_plotted;
@@ -50,6 +50,8 @@ export default function CourseList({
                   checkOriginalCourse
                 ) {
                   handleSelect(course);
+                } else {
+                  setToastMessage(""); // set toast message callback function
                 }
               }}
             />
@@ -69,7 +71,7 @@ const LockCourseCard = ({ course }) => {
   const assignedRoom = course.room_name;
 
   return (
-    <div className="p-4 rounded-2xl bg-gray-200 shadow-sm relative select-none opacity-80">
+    <div className="p-4 rounded-2xl border border-gray-400 bg-gray-200 shadow-sm relative select-none opacity-80">
       <div className="flex justify-between items-start mb-2">
         <div>
           <p className="font-semibold text-gray-800">{course.course_code}</p>
@@ -126,7 +128,6 @@ const CourseCard = ({ course, isSelected, onClick }) => {
           </span>
         )}
       </div>
-
       {/* Info */}
       <div className="mt-2 space-y-1 text-sm text-gray-700">
         <p className="flex items-center gap-2">
@@ -138,14 +139,7 @@ const CourseCard = ({ course, isSelected, onClick }) => {
             fontSize="small"
             className={teacherFullName ? "text-sky-500" : "text-rose-500"}
           />
-          {teacherFullName || "?"}
-        </p>
-        <p className="flex items-center gap-2">
-          <MeetingRoomIcon
-            fontSize="small"
-            className={assignedRoom ? "text-sky-500" : "text-rose-500"}
-          />
-          {assignedRoom || "?"}
+          {teacherFullName || "No teacher"} → {assignedRoom || "No room"}
         </p>
       </div>
     </div>

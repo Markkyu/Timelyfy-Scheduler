@@ -13,7 +13,7 @@ export default async function deleteSchedules(schedules) {
       courses
     );
 
-    console.log(data);
+    // console.log(data);
     return data;
   } catch (err) {
     throw new Error(error.response?.data?.message || error.message);

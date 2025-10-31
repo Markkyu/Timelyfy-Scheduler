@@ -61,7 +61,9 @@ export default function ToastNotification({
             height: 4,
             borderRadius: 5,
             backgroundColor: "rgba(255,255,255,0.5)",
-            "& .MuiLinearProgress-bar": { backgroundColor: "#B8ADAD" },
+            "& .MuiLinearProgress-bar": {
+              backgroundColor: type == "error" ? "#B01C1C" : "#41B840",
+            },
           }}
         />
       </Alert>

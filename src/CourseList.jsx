@@ -6,6 +6,8 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 export default function CourseList({
   courses,
+  courses_error,
+  courses_loading,
   selectedCourse,
   setSelectedCourse,
   selectedCourseOriginalHours,
@@ -27,8 +29,45 @@ export default function CourseList({
 
   const checkOriginalCourse = selectedCourse === selectedCourseOriginalHours;
 
+  if (courses_error) {
+    return (
+      <section className="w-full h-full border-t-6 border-t-red-800 p-6 bg-white shadow-md rounded-xl">
+        <h2 className="text-2xl font-semibold text-red-800">
+          Available Courses
+        </h2>
+        <div className="py-4">{children}</div>
+        <div className="w-full bg-white rounded-xl p-2 border border-red-600 text-center">
+          <h1 className="text-red-600 text-xl font-bold">
+            Error Loading Courses
+          </h1>
+          <span className="text-gray-700 underline">
+            {courses_error?.message}
+          </span>
+        </div>
+      </section>
+    );
+  }
+
+  if (courses_loading) {
+    const repeatCards = Array.from({ length: 6 }, (x, i) => i);
+
+    return (
+      <section className="w-full h-full border-t-6 border-t-red-800 p-6 bg-white shadow-md rounded-xl">
+        <h2 className="text-2xl font-semibold text-red-800">
+          Available Courses
+        </h2>
+        <div className="py-4">{children}</div>
+        <div className="grid grid-cols-1 gap-4">
+          {repeatCards.map((x, index) => (
+            <LoadingCard key={index} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="border-t-6 border-t-red-800 p-6 bg-white shadow-md rounded-xl w-full">
+    <section className="w-full h-full border-t-6 border-t-red-800 p-6 bg-white shadow-md rounded-xl">
       <h2 className="text-2xl font-semibold text-red-800">Available Courses</h2>
       <div className="py-4">{children}</div>
       <div className="grid grid-cols-1 gap-4">
@@ -141,6 +180,33 @@ const CourseCard = ({ course, isSelected, onClick }) => {
           />
           {teacherFullName || "No teacher"} → {assignedRoom || "No room"}
         </p>
+      </div>
+    </div>
+  );
+};
+
+// LOADING COURSE CARD (Skeleton)
+const LoadingCard = () => {
+  return (
+    <div className="relative p-4 rounded-2xl border border-gray-300 bg-white shadow-sm animate-pulse">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-2">
+        <div className="space-y-2">
+          <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          <div className="h-3 w-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="mt-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 bg-gray-300 rounded-full"></div>
+          <div className="h-3 w-28 bg-gray-200 rounded"></div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 bg-gray-300 rounded-full"></div>
+          <div className="h-3 w-36 bg-gray-200 rounded"></div>
+        </div>
       </div>
     </div>
   );

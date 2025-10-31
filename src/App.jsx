@@ -27,11 +27,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 const timeHeader = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 export default function App() {
-  const college_group = 1;
-  const college_year = 1;
-  const college_sem = 1;
+  const college_group = 1; // useParams here
+  const college_year = 1; // useParams here
+  const college_sem = 1; // useParams here
 
+  // Track selected course state
   const [selectedCourse, setSelectedCourse] = useState(null);
+
+  // Allocating error message
+  const [allocatingError, setAllocatingError] = useState(null);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState("");
@@ -68,7 +72,8 @@ export default function App() {
     return [...existingSchedules, ...newSchedules];
   }, [existingSchedules, newSchedules]);
 
-  const disabledLockButton = selectedCourse && selectedCourse?.hours_week != 0;
+  const disabledLockButton =
+    (selectedCourse && selectedCourse?.hours_week != 0) || !selectedCourse;
 
   const [duration, setDuration] = useState(1);
 
@@ -105,10 +110,10 @@ export default function App() {
     });
 
     if (!validation.valid) {
-      console.log(validation.message);
+      console.error(validation.message);
       setToastMessage(validation.message);
+      setToastType("error");
       setToastTrigger((prev) => prev + 1);
-      // setToastType("error"); // error by default, commented
       return;
     }
 
@@ -122,8 +127,6 @@ export default function App() {
       slot_day: dayIndex,
       slot_time: timeIndex + i,
     }));
-
-    console.log("Added schedule:", newEntries);
 
     // Update state
     setNewSchedules((prev) => [...prev, ...newEntries]);
@@ -142,44 +145,56 @@ export default function App() {
     }));
   };
 
-  const handleRemoveSchedule = (day, timeIndex) => {
-    // if (!selectedCourse || !queueSubjects) return;
+  const handleRemoveSchedule = (day, startTime) => {
+    // setSelectedCourse(null);
 
-    // Find the schedule to remove
-    const targetSchedule = newSchedules.find(
-      (s) => s.slot_day === day && s.slot_time === timeIndex
+    // Find course at clicked slot
+    const target = newSchedules.find(
+      (s) => s.slot_day === day && s.slot_time === startTime
     );
+    if (!target) return;
 
-    if (!targetSchedule) {
-      console.log("No schedule found at that cell.");
-      return;
+    const courseId = target.slot_course;
+
+    // Find contiguous block (rowSpan)
+    let timePointer = startTime;
+    let block = [];
+
+    while (true) {
+      const cell = newSchedules.find(
+        (s) =>
+          s.slot_day === day &&
+          s.slot_time === timePointer &&
+          s.slot_course === courseId
+      );
+      if (!cell) break;
+      block.push(cell);
+      timePointer++;
     }
 
-    const courseCode = targetSchedule.slot_course;
+    // Remove the full contiguous duration
+    setNewSchedules((prev) => prev.filter((s) => !block.includes(s)));
 
-    // Remove it from the newSchedules array
-    setNewSchedules((prev) =>
-      prev.filter((s) => !(s.slot_day === day && s.slot_time === timeIndex))
-    );
+    const hoursToRestore = block.length * 0.5;
 
-    // Restore 0.5 hours (1 cell = 0.5 hr)
-    setQueueSubjects((prevSubjects) =>
-      prevSubjects.map((subject) =>
-        subject.course_code === courseCode
-          ? { ...subject, hours_week: subject.hours_week + 0.5 }
+    // Restore hours in queue subjects
+    setQueueSubjects((prev) =>
+      prev.map((subject) =>
+        subject.course_id === courseId
+          ? { ...subject, hours_week: subject.hours_week + hoursToRestore }
           : subject
       )
     );
 
-    // If currently selected course is the same, restore hours to it too
+    // Restore hours to selected course if applicable
     setSelectedCourse((prev) =>
-      prev?.course_code === courseCode
-        ? { ...prev, hours_week: prev.hours_week + 0.5 }
+      prev?.course_id === courseId
+        ? { ...prev, hours_week: prev.hours_week + hoursToRestore }
         : prev
     );
 
     console.log(
-      `Removed schedule for ${courseCode} on day ${day}, time ${timeIndex}`
+      `Removed full block for course ${courseId}, restored ${hoursToRestore} hrs.`
     );
   };
 
@@ -199,25 +214,16 @@ export default function App() {
       setAllocating(true);
       setAllocatingStatus("loading");
 
-      await sleep(1500); // “thinking”
-
-      // const scheduleSimulation = new Promise((resolve, reject) => {
-      //   setTimeout(() => {
-      //     reject([]);
-      //   }, 1000);
-      // });
+      await sleep(500); // “thinking”
 
       const assigningSchedules = await autoAllocate(slots);
-      // const assigningSchedules = await scheduleSimulation;
 
       if (!assigningSchedules || assigningSchedules.length === 0) {
         setAllocatingStatus("empty");
-        await sleep(1500);
         return;
       }
 
       setAllocatingStatus("success");
-      await sleep(500);
 
       // success — animate insertion
       for (let i = 0; i < assigningSchedules.length; i++) {
@@ -237,67 +243,18 @@ export default function App() {
             : subject;
         })
       );
-
-      await sleep(1);
     } catch (err) {
-      console.error(err);
+      console.error(err.message);
+      setAllocatingError(err.message);
       setAllocatingStatus("error");
-      await sleep(1500);
     } finally {
-      await sleep(200);
+      await sleep(500);
       setAllocating(false);
+      setSelectedCourse(null);
     }
   };
 
-  // const handleAutoAllocate = async () => {
-  //   const slots = queueSubjects
-  //     .filter((element) => element.hours_week > 0 && element.is_plotted != 1)
-  //     .map((element) => ({
-  //       course_ID: element.course_id,
-  //       teacher_ID: element.assigned_teacher?.toString() || "0",
-  //       room_ID: element.assigned_room?.toString() || "0",
-  //     }));
-
-  //   console.log(slots);
-
-  //   try {
-  //     setAllocating(true);
-  //     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  //     await sleep(2000);
-
-  //     const assigningSchedules = await autoAllocate(slots);
-
-  //     console.log(assigningSchedules);
-
-  //     // Smooth insertion of generated schedules
-  //     for (let i = 0; i < assigningSchedules.length; i++) {
-  //       setNewSchedules((prev) => [...prev, assigningSchedules[i]]);
-  //       await sleep(33);
-  //     }
-
-  //     // Now that we know which courses got scheduled
-  //     setQueueSubjects((prevSubjects) =>
-  //       prevSubjects.map((subject) => {
-  //         const scheduledCount = assigningSchedules.filter(
-  //           (s) => s.slot_course === subject.course_id
-  //         ).length;
-
-  //         // Each cell = 0.5 hours
-  //         const hoursUsed = scheduledCount * 0.5;
-
-  //         return hoursUsed > 0
-  //           ? { ...subject, hours_week: subject.hours_week - hoursUsed }
-  //           : subject;
-  //       })
-  //     );
-  //   } catch (err) {
-  //     console.error(err);
-  //   } finally {
-  //     setAllocating(false);
-  //   }
-  // };
-
+  // Mutation of uploading schedules
   const { mutate: uploadScheduleMutate, isPending: postScheduleLoading } =
     useMutation({
       mutationFn: (newSchedules) => uploadSchedule(newSchedules),
@@ -313,10 +270,17 @@ export default function App() {
 
         setSelectedCourse(null);
         setNewSchedules([]);
+
+        setToastMessage("New schedules successfully saved!");
+        setToastType("success");
+        setToastTrigger((prev) => prev + 1);
       },
 
       onError: (error) => {
         console.error(error?.message);
+        setToastMessage("Error saving schedules");
+        setToastType("error");
+        setToastTrigger((prev) => prev + 1);
       },
     });
 
@@ -333,8 +297,6 @@ export default function App() {
         (s) => s.slot_course === subject.course_id
       ).length;
 
-      console.log(plottedCount);
-
       const restoredHours = plottedCount / 2;
 
       return {
@@ -348,6 +310,10 @@ export default function App() {
     setSelectedCourse(null);
 
     console.log("Table reset — schedules cleared and hours restored.");
+
+    setToastMessage("Table reset — schedules cleared and hours restored");
+    setToastType("success");
+    setToastTrigger((prev) => prev + 1);
   };
 
   const handleRemoveCourseSchedules = (courseId) => {
@@ -385,7 +351,7 @@ export default function App() {
         : prev
     );
 
-    setSelectedCourse(null);
+    setSelectedCourse(selectedCourseOriginalHours);
 
     console.log(
       `Removed ${courseSchedules.length} plotted schedules for course ${courseId}. Restored ${hoursToRestore} hrs.`
@@ -399,15 +365,18 @@ export default function App() {
       </h1>
       <main className="flex flex-col gap-4 p-6">
         <div className="w-full flex justify-center gap-4">
-          <div className="flex-1">
+          <div className="flex-1 justify-end">
             <CourseList
               courses={queueSubjects}
+              courses_error={queue_error}
+              courses_loading={queue_loading}
               selectedCourse={selectedCourse}
               setSelectedCourse={setSelectedCourse}
               selectedCourseOriginalHours={selectedCourseOriginalHours}
               setSelectedCourseOriginalHours={setSelectedCourseOriginalHours}
               setToastMessage={() => {
                 setToastMessage("Finish scheduling this subject first");
+                setToastType("error");
                 setToastTrigger((prev) => prev + 1);
               }}
             >
@@ -420,10 +389,13 @@ export default function App() {
           </div>
           <div className="flex-3">
             <ScheduleTable
+              schedules_loading={schedules_loading}
+              schedules_error={schedules_error}
               headers={timeHeader}
               schedules={allSchedules}
               onCellClick={handleCellClick}
               selectedCourse={selectedCourse}
+              onRemoveSchedule={handleRemoveSchedule}
             >
               {/* Auto Allocate */}
               <button
@@ -436,7 +408,7 @@ export default function App() {
                   : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/30"
               }`}
               >
-                <span>Auto Allocate</span>
+                <span>{allocating ? "Allocating..." : "Auto Allocate"}</span>
                 <AutoAwesomeIcon fontSize="small" />
               </button>
 
@@ -460,7 +432,7 @@ export default function App() {
                   : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40"
               }`}
               >
-                <span>Lock Schedule</span>
+                <span>{"Lock Schedule"}</span>
                 <LockIcon fontSize="small" />
               </button>
             </ScheduleTable>
@@ -470,12 +442,18 @@ export default function App() {
         <hr className="my-6 border-gray-400" />
 
         <div className="w-full flex justify-center">
-          <RemoveLockSchedules lockedSchedules={existingSchedules} />
+          <RemoveLockSchedules
+            lockedSchedules={existingSchedules}
+            loading={schedules_loading}
+            schedules_loading={schedules_loading}
+            schedules_error={schedules_error}
+          />
         </div>
 
         <AutoAllocatingOverlay
           visible={allocating}
           status={allocatingStatus} // "loading" | "success" | "empty" | "error"
+          errorMessage={allocatingError}
         />
 
         <ToastNotification

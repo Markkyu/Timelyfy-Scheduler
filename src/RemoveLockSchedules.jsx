@@ -5,10 +5,13 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import deleteSchedules from "./api/deleteSchedules";
 import createSchedulesQueryOptions from "./api/createSchedulesQueryOptions";
 import createCoursesQueryOptions from "./api/createCoursesQueryOptions";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 export default function RemoveLockSchedules({
   lockedSchedules,
   setExistingSchedules,
+  schedules_loading,
+  schedules_error,
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
@@ -124,71 +127,59 @@ export default function RemoveLockSchedules({
 
   const checkedCount = Object.values(checkedCourses).filter(Boolean).length;
 
+  if (schedules_loading) return <SchedulesLoading />;
+
+  if (schedules_error) return <SchedulesError />;
+
   return (
     <>
-      <div className="max-w-4xl bg-white border-t-6 border-red-800 p-4 rounded-md shadow-md w-full ">
-        <section className=" p-6 bg-yellow-50 border-4 border-yellow-400 shadow-md rounded-xl">
-          <h2 className="text-xl flex items-center font-bold mb-4 text-yellow-800">
-            <span>Removing Locked Schedules</span>
-            <DeleteIcon className="ml-2" />
-          </h2>
+      <div className="relative max-w-4xl bg-white border-t-6 border-red-800 p-4 rounded-md shadow-md w-full ">
+        {/* Header Warning */}
+        <HeaderWarning />
 
-          <p className="text-sm text-gray-700 font-medium mb-3">
-            ⚠️ Warning: Removing locked schedules may shift the flow of a
-            timetable, this may allow other users to fill-in the available cell
-            disrupting the flow of your schedule.
-          </p>
-        </section>
+        {/* Empty state */}
+        <div className="grid gap-4 mt-4 text-xl">
+          {uniqueCourses.length != 0 ? (
+            <h1 className="text-gray-700">
+              {uniqueCourses?.length} locked schedules found
+            </h1>
+          ) : (
+            ""
+          )}
 
-        <Button
-          variant="contained"
-          color="error"
-          size="small"
-          endIcon={<DeleteIcon />}
-          onClick={handleRemoveAllChecked}
-          disabled={checkedCount === 0}
-          sx={{ textTransform: "none", fontWeight: 600, mt: 2 }}
-        >
-          Remove All Checked ({checkedCount})
-        </Button>
-
-        <div className="grid gap-4 mt-4">
           {uniqueCourses?.length === 0 && (
             <p className="text-gray-500 italic">No locked schedules found.</p>
           )}
 
-          {uniqueCourses?.map((course, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center bg-gray-100 p-3 rounded-md border border-gray-300"
-            >
-              <div className="flex gap-4 items-center">
-                <input
-                  type="checkbox"
-                  checked={checkedCourses[course.slot_course] || false}
-                  onChange={() => handleCheckboxChange(course.slot_course)}
-                  className="size-5 cursor-pointer"
-                />
-                <div>
-                  <p className="font-semibold">{course.slot_course}</p>
-                  <p className="text-xs text-gray-500">
-                    {course.count} time slot{course.count > 1 ? "s" : ""}
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="contained"
-                color="error"
-                size="small"
-                endIcon={<DeleteIcon />}
-                onClick={() => handleDeleteClick(course.slot_course)}
-                sx={{ textTransform: "none", fontWeight: 600 }}
+          {/* Has value state */}
+          {uniqueCourses?.map((course, i) => {
+            return (
+              <div
+                key={i}
+                className="flex justify-between items-center bg-gray-100 p-3 rounded-md border border-gray-300"
               >
-                Remove
-              </Button>
-            </div>
-          ))}
+                <div className="flex gap-4 items-center">
+                  <div>
+                    <p className="font-semibold">{course.slot_course}</p>
+                    <p className="text-xs text-gray-500">
+                      {course.count} time slot{course.count > 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  endIcon={<DeleteIcon />}
+                  onClick={() => handleDeleteClick(course.slot_course)}
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Remove
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -196,12 +187,12 @@ export default function RemoveLockSchedules({
       {confirmOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-96">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+            <h3 className="text-lg flex items-center font-semibold text-gray-800 mb-3">
               Confirm Removal
             </h3>
             <p className="text-sm text-gray-700 mb-4">
               Deleting this locked course-schedule may cause other users to
-              fill-in. Are you sure you want to remove{" "}
+              fill-in its current cell. Are you sure you want to remove{" "}
               <strong>{selectedSchedule}</strong>?
             </p>
 
@@ -228,3 +219,156 @@ export default function RemoveLockSchedules({
     </>
   );
 }
+
+const SchedulesLoading = () => {
+  return (
+    <>
+      <div className="relative max-w-4xl bg-white border-t-6 border-red-800 p-4 rounded-md shadow-md w-full ">
+        {/* {schedules_error && <SchedulesError />}
+
+        {schedules_loading && <SchedulesLoading />} */}
+
+        <HeaderWarning />
+
+        <div className="bg-white mt-4 px-8 py-6 rounded-2xl flex flex-col items-center gap-3 animate-fade-in">
+          <div className="w-10 h-10 border-4 border-gray-300 border-t-red-800 rounded-full animate-spin"></div>
+          <span className="text-lg font-semibold text-gray-700 flex items-center">
+            Loading Schedules<span className="typing-dots ml-1"></span>
+          </span>
+        </div>
+
+        <style jsx="true">{`
+          .typing-dots::after {
+            content: "...";
+            animation: dots 1.2s steps(4, end) infinite;
+          }
+          @keyframes dots {
+            0%,
+            20% {
+              content: "";
+            }
+            40% {
+              content: ".";
+            }
+            60% {
+              content: "..";
+            }
+            80%,
+            100% {
+              content: "...";
+            }
+          }
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: scale(0.95);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+        `}</style>
+      </div>
+    </>
+    // <div className="flex items-center justify-center backdrop-blur-xs bg-white/40 z-10">
+    // <div className="bg-white border border-gray-300 shadow-xl px-8 py-6 rounded-2xl flex flex-col items-center gap-3 animate-fade-in">
+    //   <div className="w-10 h-10 border-4 border-gray-300 border-t-red-800 rounded-full animate-spin"></div>
+    //   <span className="text-lg font-semibold text-gray-700 flex items-center">
+    //     Loading Schedules<span className="typing-dots ml-1"></span>
+    //   </span>
+    // </div>
+
+    // <style jsx>{`
+    //   .typing-dots::after {
+    //     content: "...";
+    //     animation: dots 1.2s steps(4, end) infinite;
+    //   }
+    //   @keyframes dots {
+    //     0%,
+    //     20% {
+    //       content: "";
+    //     }
+    //     40% {
+    //       content: ".";
+    //     }
+    //     60% {
+    //       content: "..";
+    //     }
+    //     80%,
+    //     100% {
+    //       content: "...";
+    //     }
+    //   }
+    //   @keyframes fade-in {
+    //     from {
+    //       opacity: 0;
+    //       transform: scale(0.95);
+    //     }
+    //     to {
+    //       opacity: 1;
+    //       transform: scale(1);
+    //     }
+    //   }
+    // `}</style>
+    // </div>
+  );
+};
+
+const HeaderWarning = () => {
+  return (
+    <section className=" p-6 bg-yellow-50 border-4 border-yellow-400 shadow-md rounded-xl">
+      <h2 className="text-xl flex items-center font-bold mb-4 text-yellow-800">
+        <span>Removing Locked Schedules</span>
+        <DeleteIcon className="ml-2" />
+      </h2>
+
+      <p className="text-sm text-gray-700 font-medium mb-3">
+        ⚠️ Warning: Removing locked schedules may shift the flow of a timetable,
+        this may allow other users to fill-in the available cell disrupting the
+        flow of your schedule.
+      </p>
+    </section>
+  );
+};
+
+const SchedulesError = () => {
+  return (
+    <>
+      <div className="relative max-w-4xl bg-white border-t-6 border-red-800 p-4 rounded-md shadow-md w-full ">
+        <HeaderWarning />
+        <div className="bg-white mt-4 px-8 py-6 rounded-2xl flex flex-col items-center gap-4 animate-fade-in">
+          <span className="text-xl font-bold text-red-700">
+            Error Loading Schedule
+          </span>
+          <p className="text-gray-600 text-center">
+            Something went wrong while fetching data.
+          </p>
+        </div>
+      </div>
+    </>
+    // <div className="flex items-center justify-center backdrop-blur-xs bg-white/40 z-10">
+    // <div className="bg-white border border-red-300 shadow-xl px-8 py-6 rounded-2xl flex flex-col items-center gap-4 animate-fade-in">
+    //   <span className="text-xl font-bold text-red-700">
+    //     Error Loading Schedule
+    //   </span>
+    //   <p className="text-gray-600 text-center">
+    //     Something went wrong while fetching data.
+    //   </p>
+    // </div>
+
+    //   <style jsx="true">{`
+    //     @keyframes fade-in {
+    //       from {
+    //         opacity: 0;
+    //         transform: scale(0.95);
+    //       }
+    //       to {
+    //         opacity: 1;
+    //         transform: scale(1);
+    //       }
+    //     }
+    //   `}</style>
+    // </div>
+  );
+};

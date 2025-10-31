@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 
-export default function AutoAllocatingOverlay({ visible, status }) {
+export default function AutoAllocatingOverlay({
+  visible,
+  status,
+  errorMessage,
+}) {
   const [logs, setLogs] = useState([]);
   const [dots, setDots] = useState("");
 
   const logMessages = [
     { text: "$ initializing schedule allocator...", delay: 0 },
     { text: "> analyzing timetable", delay: 1000 },
-    // { text: "> calculating optimal paths", delay: 3000 },
-    // { text: "✓ transaction complete", delay: 10000, success: true },
   ];
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,7 +40,7 @@ export default function AutoAllocatingOverlay({ visible, status }) {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xs bg-black/60 animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[1px] bg-black/40 animate-fadeIn">
       <div className="w-full max-w-2xl mx-4">
         {/* Terminal window */}
         <div className="bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
@@ -56,12 +58,13 @@ export default function AutoAllocatingOverlay({ visible, status }) {
 
           {/* Terminal content */}
           <div className="p-6 font-mono text-sm space-y-2 min-h-[300px]">
-            {logs.map((log, index) => (
-              <div key={index} className="animate-slideDown text-gray-300">
-                {log.text}
-              </div>
-            ))}
-
+            {logs.map((log, index) => {
+              return (
+                <div key={index} className="animate-slideDown text-gray-300">
+                  {log.text}
+                </div>
+              );
+            })}
             {/* Status Message */}
             {status === "success" && (
               <div className="animate-slideDown text-green-400 font-mono text-sm">
@@ -75,11 +78,14 @@ export default function AutoAllocatingOverlay({ visible, status }) {
             )}
             {status === "error" && (
               <div className="animate-slideDown text-red-400 font-mono text-sm">
-                ✖ Allocation failed - {"error message"}
+                ✖ Allocation failed: {errorMessage}
               </div>
             )}
-
-            {logs.length < logMessages.length && (
+            {!(
+              status == "error" ||
+              status == "success" ||
+              status == "empty"
+            ) && (
               <div className="text-blue-400 flex items-center gap-2">
                 <div className="w-2 h-4 bg-blue-400 animate-pulse" />
                 <span>Processing{dots}</span>
@@ -89,7 +95,7 @@ export default function AutoAllocatingOverlay({ visible, status }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx="true">{`
         @keyframes slideDown {
           from {
             opacity: 0;
